@@ -41,17 +41,17 @@ const CAT_LABELS: Record<string, string> = {
 };
 
 const WORKFLOW_STATUS: { name: string; id: string; active: boolean; critical: boolean }[] = [
-  { name: "F1: رادار مكة الذكي", id: "n3RDcP2kLQxcPtjP", active: false, critical: true },
-  { name: "F2: التقاط العملاء", id: "2opXMMBpcbnzs7xr", active: false, critical: true },
-  { name: "F3: تسجيل النقاط", id: "36qkqwFGolnSq3qY", active: false, critical: true },
-  { name: "F4: رحلات التسويق", id: "4RO3J5x10uykTcE0", active: false, critical: true },
-  { name: "F5: محرك التسليم", id: "5uwRt8r1qyopTX8P", active: false, critical: true },
-  { name: "F6: تسليم المبيعات", id: "HgGKdZacfwotrSja", active: false, critical: false },
-  { name: "F7: مصنع المحتوى", id: "ZQI3F9Kq5pRgUF07", active: false, critical: false },
-  { name: "F8: الناشر الذكي", id: "sxy3yMXokDuKbIsO", active: false, critical: false },
-  { name: "F9: لوحة الأداء", id: "pRoADNda9kwKlS47", active: false, critical: false },
-  { name: "F10: WordPress", id: "VJKRPuloRtSd0EJG", active: false, critical: false },
-  { name: "F11: Barq Radar", id: "DjVfiMqmzXsZQnyJ", active: false, critical: false },
+  { name: "F1: رادار مكة الذكي", id: "sIOHhyoRV1hNHPXT", active: true, critical: true },
+  { name: "F2: التقاط العملاء", id: "nJbFvqwGh0ce5TfY", active: true, critical: true },
+  { name: "F3: تسجيل النقاط", id: "VXUgrCe9JJK8rbCh", active: true, critical: true },
+  { name: "F4: رحلات التسويق", id: "ToiHvNfuHDiLbdGC", active: true, critical: true },
+  { name: "F5: محرك التسليم", id: "IHsVZTYCxOVgPgbY", active: true, critical: true },
+  { name: "F6: تسليم المبيعات", id: "koO9SokylRwGLeib", active: true, critical: false },
+  { name: "F7: مصنع المحتوى", id: "6QJxQT21f9K70eAk", active: true, critical: false },
+  { name: "F8: الناشر الذكي", id: "6mjTqdf6I7CvRL2l", active: true, critical: false },
+  { name: "F9: لوحة الأداء", id: "XNK8DwBYIHIRt1Ml", active: true, critical: false },
+  { name: "F10: WordPress", id: "qVgIG9aw4nY0xBac", active: true, critical: false },
+  { name: "F11: WP Publisher", id: "x45bqsx4qvGkpyRe", active: true, critical: false },
 ];
 
 const fmtTime = (iso: string) => {
