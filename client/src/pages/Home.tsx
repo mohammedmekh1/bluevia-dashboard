@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,17 +9,17 @@ import {
   Users, TrendingUp, Send, CheckSquare,
   RefreshCw, Zap, FileText, AlertCircle,
   CheckCircle, Clock, Loader2, ChevronUp,
-  MapPin, Star,
+  MapPin, Star, Activity, DollarSign,
+  AlertTriangle, Wifi, WifiOff, UserCheck,
+  Target, BarChart3, Globe,
 } from "lucide-react";
 import { useSheets } from "@/contexts/SheetsContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { Lead, SalesTask, Article } from "@/hooks/useGoogleSheets";
 
-// ─── ثوابت ───────────────────────────────────────────────────────────────────
-
 const DEST_LABELS: Record<string, string> = {
-  tunisia: "🇹🇳 تونس",
-  turkey:  "🇹🇷 تركيا",
+  tunisia: "\u{1F1F9}\u{1F1F3} تونس",
+  turkey:  "\u{1F1F9}\u{1F1F7} تركيا",
 };
 
 const SERVICE_LABELS: Record<string, string> = {
@@ -40,7 +40,20 @@ const CAT_LABELS: Record<string, string> = {
   hot: "ساخن", warm: "دافئ", cool: "بارد", cold: "بارد جداً",
 };
 
-const fmt = (n: number) => n.toLocaleString("ar-SA");
+const WORKFLOW_STATUS: { name: string; id: string; active: boolean; critical: boolean }[] = [
+  { name: "F1: رادار مكة الذكي", id: "n3RDcP2kLQxcPtjP", active: false, critical: true },
+  { name: "F2: التقاط العملاء", id: "2opXMMBpcbnzs7xr", active: false, critical: true },
+  { name: "F3: تسجيل النقاط", id: "36qkqwFGolnSq3qY", active: false, critical: true },
+  { name: "F4: رحلات التسويق", id: "4RO3J5x10uykTcE0", active: false, critical: true },
+  { name: "F5: محرك التسليم", id: "5uwRt8r1qyopTX8P", active: false, critical: true },
+  { name: "F6: تسليم المبيعات", id: "HgGKdZacfwotrSja", active: false, critical: false },
+  { name: "F7: مصنع المحتوى", id: "ZQI3F9Kq5pRgUF07", active: false, critical: false },
+  { name: "F8: الناشر الذكي", id: "sxy3yMXokDuKbIsO", active: false, critical: false },
+  { name: "F9: لوحة الأداء", id: "pRoADNda9kwKlS47", active: false, critical: false },
+  { name: "F10: WordPress", id: "VJKRPuloRtSd0EJG", active: false, critical: false },
+  { name: "F11: Barq Radar", id: "DjVfiMqmzXsZQnyJ", active: false, critical: false },
+];
+
 const fmtTime = (iso: string) => {
   try { return new Date(iso).toLocaleTimeString("ar-SA", { hour:"2-digit", minute:"2-digit" }); }
   catch { return ""; }
@@ -50,11 +63,10 @@ const fmtDate = (iso: string) => {
   catch { return iso || "—"; }
 };
 
-// ─── KPI Card ─────────────────────────────────────────────────────────────────
-
-function KPI({ icon, title, value, sub, color="#1A4B8C" }: {
+function KPI({ icon, title, value, sub, color="#1A4B8C", trend }: {
   icon: React.ReactNode; title: string;
   value: string | number; sub?: string; color?: string;
+  trend?: { direction: "up" | "down" | "neutral"; label: string };
 }) {
   return (
     <Card className="border-border/60 shadow-sm hover:shadow-md transition-all">
@@ -67,14 +79,20 @@ function KPI({ icon, title, value, sub, color="#1A4B8C" }: {
             <p className="text-xs text-muted-foreground font-semibold truncate">{title}</p>
             <p className="text-2xl font-black leading-none mt-1 font-num" style={{ color }}>{value}</p>
             {sub && <p className="text-xs text-muted-foreground mt-1 truncate">{sub}</p>}
+            {trend && (
+              <p className={`text-xs mt-1 font-semibold ${
+                trend.direction === "up" ? "text-green-600" :
+                trend.direction === "down" ? "text-red-600" : "text-muted-foreground"
+              }`}>
+                {trend.direction === "up" ? "↑" : trend.direction === "down" ? "↓" : "↔"} {trend.label}
+              </p>
+            )}
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
-
-// ─── Destination Card ────────────────────────────────────────────────────────
 
 function DestCard({ flag, name, count, pct, color }: {
   flag: string; name: string; count: number; pct: number; color: string;
@@ -96,7 +114,147 @@ function DestCard({ flag, name, count, pct, color }: {
   );
 }
 
-// ─── Loading / Error ──────────────────────────────────────────────────────────
+function WorkflowStatusPanel() {
+  const activeCount = WORKFLOW_STATUS.filter((w) => w.active).length;
+  const criticalDown = WORKFLOW_STATUS.filter((w) => w.critical && !w.active).length;
+
+  return (
+    <Card className="border-border/60 shadow-sm" style={criticalDown > 0 ? { borderRight: "4px solid #D4380D" } : {}}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Activity size={16} />
+            حالة الووركفلوز ({activeCount}/{WORKFLOW_STATUS.length})
+          </div>
+          {criticalDown > 0 && (
+            <span className="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1">
+              <AlertTriangle size={12} /> {criticalDown} حرجة متوقفة
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {WORKFLOW_STATUS.map((w) => (
+            <div key={w.id}
+                 className={`flex items-center gap-2 p-2 rounded-lg text-xs ${
+                   w.active ? "bg-green-50" : w.critical ? "bg-red-50" : "bg-yellow-50"
+                 }`}>
+              {w.active
+                ? <Wifi size={12} className="text-green-600 shrink-0" />
+                : <WifiOff size={12} className={w.critical ? "text-red-600 shrink-0" : "text-yellow-600 shrink-0"} />
+              }
+              <span className={`font-semibold truncate ${
+                w.active ? "text-green-700" : w.critical ? "text-red-700" : "text-yellow-700"
+              }`}>
+                {w.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BudgetPanel({ dailyReports }: { dailyReports: { bookings: number; total_leads: number }[] }) {
+  const dailyBudget = 2.0;
+  const estimatedCostPerExec = 0.003;
+  const totalExecs = dailyReports.length > 0
+    ? dailyReports[dailyReports.length - 1].total_leads * 5
+    : 0;
+  const estimatedDailyCost = totalExecs * estimatedCostPerExec;
+  const budgetUsage = Math.min(100, Math.round((estimatedDailyCost / dailyBudget) * 100));
+  const remaining = Math.max(0, dailyBudget - estimatedDailyCost).toFixed(2);
+
+  return (
+    <Card className="border-border/60 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold flex items-center gap-2">
+          <DollarSign size={16} />
+          ميزانية التشغيل اليومية
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-3 mb-3">
+          <div className="text-center p-3 rounded-xl bg-blue-50">
+            <p className="text-xl font-black font-num text-blue-700">${dailyBudget}</p>
+            <p className="text-xs text-blue-600 font-semibold mt-0.5">الميزانية</p>
+          </div>
+          <div className="text-center p-3 rounded-xl bg-orange-50">
+            <p className="text-xl font-black font-num text-orange-700">${estimatedDailyCost.toFixed(2)}</p>
+            <p className="text-xs text-orange-600 font-semibold mt-0.5">المُستهلك (تقديري)</p>
+          </div>
+          <div className="text-center p-3 rounded-xl bg-green-50">
+            <p className="text-xl font-black font-num text-green-700">${remaining}</p>
+            <p className="text-xs text-green-600 font-semibold mt-0.5">المتبقي</p>
+          </div>
+        </div>
+        <div className="h-2 bg-secondary rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all"
+               style={{
+                 width: `${budgetUsage}%`,
+                 background: budgetUsage > 80 ? "#D4380D" : budgetUsage > 50 ? "#D4A843" : "#15803D"
+               }} />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2 text-center">{budgetUsage}% من الميزانية اليومية</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ConversionFunnel({ leads, tasks, deliveries }: {
+  leads: number; tasks: number; deliveries: number;
+}) {
+  const steps = [
+    { label: "عملاء محتملون", value: leads, color: "#1A4B8C" },
+    { label: "مهام مبيعات", value: tasks, color: "#D4A843" },
+    { label: "تم التسليم", value: deliveries, color: "#15803D" },
+  ];
+
+  return (
+    <Card className="border-border/60 shadow-sm">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold flex items-center gap-2">
+          <Target size={16} /> قمع التحويل
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {steps.map((step, i) => {
+            const pct = leads > 0 ? Math.round((step.value / leads) * 100) : 0;
+            return (
+              <div key={step.label}>
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs font-semibold">{step.label}</span>
+                  <span className="text-xs font-black font-num" style={{ color: step.color }}>
+                    {step.value} ({pct}%)
+                  </span>
+                </div>
+                <div className="h-3 bg-secondary rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                       style={{ width: `${pct}%`, background: step.color }} />
+                </div>
+                {i < steps.length - 1 && (
+                  <div className="text-center text-muted-foreground text-xs mt-1">↓</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {leads > 0 && (
+          <div className="mt-3 p-2.5 bg-secondary/50 rounded-lg text-center">
+            <p className="text-xs text-muted-foreground">
+              معدل التحويل الإجمالي: <span className="font-black text-foreground">
+                {Math.round((deliveries / leads) * 100)}%
+              </span>
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Loading() {
   return (
@@ -104,7 +262,7 @@ function Loading() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="animate-spin size-10" style={{ color: "#1A4B8C" }} />
-          <p className="text-muted-foreground">جاري تحميل بيانات بلوفيا…</p>
+          <p className="text-muted-foreground">جاري تحميل بيانات بلوفيا...</p>
         </div>
       </div>
     </DashboardLayout>
@@ -124,7 +282,7 @@ function ErrorView({ msg, retry }: { msg: string; retry: () => void }) {
               <RefreshCw size={15} /> إعادة المحاولة
             </Button>
             <p className="text-xs text-muted-foreground">
-              تأكّد أن الشيت مشارك (Anyone with link → Viewer)
+              تأكّد أن الشيت مشارك (Anyone with link &rarr; Viewer)
             </p>
           </CardContent>
         </Card>
@@ -132,8 +290,6 @@ function ErrorView({ msg, retry }: { msg: string; retry: () => void }) {
     </DashboardLayout>
   );
 }
-
-// ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [filter, setFilter] = useState<"today"|"week"|"month"|"all">("all");
@@ -155,16 +311,13 @@ export default function Home() {
   const fLeads = data.leads.filter((l) => !l.is_demo && filterDate(l.created_at));
   const totalFL = fLeads.length || 1;
 
-  // الوجهتان
   const tunCount = fLeads.filter((l) => l.destination === "tunisia").length;
   const turCount = fLeads.filter((l) => l.destination === "turkey").length;
 
-  // رسم التصنيفات
   const catData = (["hot","warm","cool","cold"] as const)
     .map((c) => ({ name: CAT_LABELS[c], value: fLeads.filter((l) => l.category === c).length, fill: CAT_COLORS[c] }))
     .filter((d) => d.value > 0);
 
-  // رسم الخدمات
   const svcCount: Record<string,number> = {};
   fLeads.forEach((l) => {
     const s = SERVICE_LABELS[l.service_type] || l.service_type || "غير محدد";
@@ -174,7 +327,6 @@ export default function Home() {
     .map(([name, value]) => ({ name, value }))
     .sort((a,b) => b.value - a.value);
 
-  // آخر 7 أيام
   const timeData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -186,7 +338,6 @@ export default function Home() {
     return { date: label, leads, tasks };
   });
 
-  // مصادر
   const srcCount: Record<string,number> = {};
   fLeads.forEach((l) => {
     const s = l.platform || l.source || "غير معروف";
@@ -196,7 +347,6 @@ export default function Home() {
     .map(([name, value]) => ({ name, value }))
     .sort((a,b) => b.value - a.value).slice(0, 8);
 
-  // ميزانية العملاء
   const budgetCount: Record<string,number> = {};
   fLeads.forEach((l) => {
     if (!l.budget_signal) return;
@@ -206,21 +356,38 @@ export default function Home() {
     .map(([name, value]) => ({ name, value }))
     .sort((a,b) => b.value - a.value);
 
-  // تقرير اليوم من daily_reports
   const todayReport = data.dailyReports[data.dailyReports.length - 1];
+  const yesterdayReport = data.dailyReports.length >= 2
+    ? data.dailyReports[data.dailyReports.length - 2] : null;
+
+  const leadsTrend = yesterdayReport
+    ? { direction: (summary.totalLeads > yesterdayReport.total_leads ? "up" : summary.totalLeads < yesterdayReport.total_leads ? "down" : "neutral") as "up"|"down"|"neutral",
+        label: `${Math.abs(summary.totalLeads - yesterdayReport.total_leads)} عن أمس` }
+    : undefined;
+
+  const deliveredCount = data.deliveries.filter((d) => d.status === "delivered").length;
+
+  const travelGroupCount: Record<string,number> = {};
+  fLeads.forEach((l) => {
+    const g = l.travel_group || "غير محدد";
+    travelGroupCount[g] = (travelGroupCount[g] || 0) + 1;
+  });
+  const groupData = Object.entries(travelGroupCount)
+    .map(([name, value]) => ({ name: name === "solo" ? "فردي" : name === "couple" ? "زوجين" : name === "family" ? "عائلة" : name === "group" ? "مجموعة" : name, value }))
+    .sort((a,b) => b.value - a.value);
 
   return (
     <DashboardLayout>
       <div className="p-5 md:p-7 max-w-[1400px] mx-auto">
 
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-7">
           <div>
             <h1 className="text-2xl md:text-3xl font-black" style={{ color: "#1A4B8C" }}>
-              ✈ بلوفيا ترافل
+              بلوفيا ترافل
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              لوحة إحصائيات — تونس وتركيا
+              لوحة الإدارة الشاملة — تونس وتركيا
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -245,27 +412,47 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ── KPIs ── */}
+        {/* System Alert */}
+        {WORKFLOW_STATUS.filter((w) => w.critical && !w.active).length > 0 && (
+          <div className="mb-5 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+            <AlertTriangle className="text-red-600 shrink-0" size={20} />
+            <div className="flex-1">
+              <p className="text-sm font-bold text-red-700">تنبيه: ووركفلوز حرجة متوقفة</p>
+              <p className="text-xs text-red-600">
+                {WORKFLOW_STATUS.filter((w) => w.critical && !w.active).map((w) => w.name).join("، ")} — يُرجى تفعيلها من n8n
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* KPIs */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-6">
-          <KPI icon={<Users size={18}/>}       title="إجمالي العملاء"  value={summary.totalLeads}         sub={`${summary.hotLeads} ساخن`}       color="#1A4B8C"/>
-          <KPI icon={<Zap size={18}/>}         title="عملاء ساخنون"   value={summary.hotLeads}           sub="أولوية قصوى"                       color="#D4380D"/>
-          <KPI icon={<MapPin size={18}/>}      title="رحلات تونس"     value={summary.tunisiaLeads}       sub="🇹🇳"                               color="#D4A843"/>
-          <KPI icon={<MapPin size={18}/>}      title="رحلات تركيا"    value={summary.turkeyLeads}        sub="🇹🇷"                               color="#1A4B8C"/>
-          <KPI icon={<Send size={18}/>}        title="معدل التسليم"   value={`${summary.deliveryRate}%`} sub="من الإجمالي"                       color="#15803D"/>
-          <KPI icon={<CheckSquare size={18}/>} title="مهام مفتوحة"    value={summary.openTasks}          sub={`${summary.escalatedTasks} عاجلة`} color="#D97706"/>
-          <KPI icon={<Star size={18}/>}        title="متوسط الدرجة"   value={summary.avgScore}           sub="من 100"                            color="#D4A843"/>
-          <KPI icon={<FileText size={18}/>}    title="مقالات منشورة"  value={summary.publishedArticles}  sub={`${summary.readyArticles} جاهزة`}  color="#1A4B8C"/>
-          <KPI icon={<TrendingUp size={18}/>}  title="إجمالي الحجوزات" value={summary.totalBookings}     sub="من التقارير"                       color="#15803D"/>
-          <KPI icon={<ChevronUp size={18}/>}   title="تقييم اليوم"    value={todayReport?.overall_rating || "—"} sub={fmtDate(todayReport?.date || "")} color="#1A4B8C"/>
+          <KPI icon={<Users size={18}/>}       title="إجمالي العملاء"    value={summary.totalLeads}         sub={`${summary.hotLeads} ساخن · ${summary.warmLeads} دافئ`} color="#1A4B8C" trend={leadsTrend}/>
+          <KPI icon={<Zap size={18}/>}         title="عملاء ساخنون"     value={summary.hotLeads}           sub="أولوية قصوى"                       color="#D4380D"/>
+          <KPI icon={<MapPin size={18}/>}      title="رحلات تونس"       value={summary.tunisiaLeads}       sub={`${summary.totalLeads ? Math.round(summary.tunisiaLeads/summary.totalLeads*100) : 0}% من الإجمالي`} color="#D4A843"/>
+          <KPI icon={<MapPin size={18}/>}      title="رحلات تركيا"      value={summary.turkeyLeads}        sub={`${summary.totalLeads ? Math.round(summary.turkeyLeads/summary.totalLeads*100) : 0}% من الإجمالي`} color="#1A4B8C"/>
+          <KPI icon={<Send size={18}/>}        title="معدل التسليم"     value={`${summary.deliveryRate}%`} sub={`${deliveredCount} ناجح`}          color="#15803D"/>
+          <KPI icon={<CheckSquare size={18}/>} title="مهام مفتوحة"      value={summary.openTasks}          sub={`${summary.escalatedTasks} عاجلة`} color="#D97706"/>
+          <KPI icon={<Star size={18}/>}        title="متوسط الدرجة"     value={summary.avgScore}           sub="من 100"                            color="#D4A843"/>
+          <KPI icon={<FileText size={18}/>}    title="مقالات منشورة"    value={summary.publishedArticles}  sub={`${summary.readyArticles} جاهزة`}  color="#1A4B8C"/>
+          <KPI icon={<TrendingUp size={18}/>}  title="إجمالي الحجوزات"  value={summary.totalBookings}      sub="من التقارير"                       color="#15803D"/>
+          <KPI icon={<UserCheck size={18}/>}   title="معدل التحويل"     value={`${summary.totalLeads > 0 ? Math.round(deliveredCount / summary.totalLeads * 100) : 0}%`}
+               sub="عميل → تسليم" color="#1A4B8C"/>
         </div>
 
-        {/* ── الوجهتان ── */}
+        {/* Workflow Status + Budget */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+          <WorkflowStatusPanel />
+          <BudgetPanel dailyReports={data.dailyReports} />
+        </div>
+
+        {/* Destinations + 7-day chart */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
           <div className="space-y-3">
             <h3 className="font-bold text-sm text-muted-foreground">توزيع الوجهات</h3>
-            <DestCard flag="🇹🇳" name="تونس"  count={tunCount}
+            <DestCard flag="\u{1F1F9}\u{1F1F3}" name="تونس"  count={tunCount}
                       pct={Math.round(tunCount/totalFL*100)} color="#D4A843"/>
-            <DestCard flag="🇹🇷" name="تركيا" count={turCount}
+            <DestCard flag="\u{1F1F9}\u{1F1F7}" name="تركيا" count={turCount}
                       pct={Math.round(turCount/totalFL*100)} color="#1A4B8C"/>
             <div className="p-3 rounded-xl border border-border/50 bg-secondary/50">
               <p className="text-xs text-muted-foreground">غير محدد</p>
@@ -273,9 +460,13 @@ export default function Home() {
                 {fLeads.filter((l) => !l.destination).length}
               </p>
             </div>
+            <ConversionFunnel
+              leads={summary.totalLeads}
+              tasks={data.salesTasks.length}
+              deliveries={deliveredCount}
+            />
           </div>
 
-          {/* منحنى 7 أيام */}
           <Card className="lg:col-span-2 border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">العملاء والمهام — آخر 7 أيام</CardTitle>
@@ -306,9 +497,8 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* ── Charts Row 2 ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
-          {/* Pie التصنيفات */}
+        {/* Charts Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 mb-5">
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">توزيع التصنيفات</CardTitle>
@@ -340,7 +530,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* الخدمات */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">أنواع الخدمات</CardTitle>
@@ -362,7 +551,27 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* ميزانية العملاء */}
+          <Card className="border-border/60 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base font-bold">نوع المسافرين</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {groupData.length === 0 ? (
+                <div className="h-[220px] flex items-center justify-center text-muted-foreground text-sm">لا توجد بيانات</div>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={groupData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#DDE4EF"/>
+                    <XAxis dataKey="name" stroke="#9CA3AF" fontSize={11}/>
+                    <YAxis stroke="#9CA3AF" fontSize={11} allowDecimals={false}/>
+                    <Tooltip contentStyle={{ borderRadius:8, fontFamily:"Cairo", fontSize:12 }}/>
+                    <Bar dataKey="value" fill="#15803D" radius={[6,6,0,0]} name="العملاء"/>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">إشارات الميزانية</CardTitle>
@@ -385,9 +594,8 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* ── جداول ── */}
+        {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* العملاء الساخنون */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -428,7 +636,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* المهام العاجلة */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold">المهام العاجلة</CardTitle>
@@ -437,7 +644,7 @@ export default function Home() {
               {data.salesTasks.filter((t) => t.task_status !== "closed").length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-8">
                   <CheckCircle className="size-8 text-green-500"/>
-                  <p className="text-muted-foreground text-sm">لا توجد مهام مفتوحة 🎉</p>
+                  <p className="text-muted-foreground text-sm">لا توجد مهام مفتوحة</p>
                 </div>
               ) : (
                 <div className="space-y-2.5">
@@ -449,6 +656,11 @@ export default function Home() {
                           <p className="text-xs text-muted-foreground truncate">
                             {DEST_LABELS[t.destination] || t.destination || "—"} · {t.action_required}
                           </p>
+                          {t.sla_minutes > 0 && (
+                            <p className="text-xs text-orange-600 flex items-center gap-1 mt-0.5">
+                              <Clock size={10}/> SLA: {t.sla_minutes} دقيقة
+                            </p>
+                          )}
                         </div>
                         <span className={`px-2 py-0.5 rounded text-xs font-bold text-white shrink-0 ${
                           t.task_status === "escalated" ? "bg-red-600" : "bg-orange-500"
@@ -464,12 +676,13 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* ── مصادر + مقالات ── */}
+        {/* Sources + Articles */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-          {/* مصادر */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-bold">مصادر العملاء</CardTitle>
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <Globe size={16}/> مصادر العملاء
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {srcData.length === 0 ? (
@@ -488,7 +701,6 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* مقالات SEO */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold flex items-center gap-2">
@@ -534,20 +746,21 @@ export default function Home() {
           </Card>
         </div>
 
-        {/* ── تقرير اليوم ── */}
+        {/* Daily Report */}
         {todayReport && (
           <Card className="border-border/60 shadow-sm mb-5" style={{ borderRight: "4px solid #1A4B8C" }}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span>📊 آخر تقرير يومي</span>
+                <span>آخر تقرير يومي</span>
                 <span className="text-sm font-normal text-muted-foreground">{fmtDate(todayReport.date)}</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
                 {[
                   { label:"إجمالي العملاء", val:todayReport.total_leads },
                   { label:"ساخنون",         val:todayReport.hot_leads },
+                  { label:"دافئون",         val:todayReport.warm_leads },
                   { label:"معدل التسليم",   val:`${todayReport.delivery_rate}%` },
                   { label:"المهام المفتوحة", val:todayReport.open_tasks },
                   { label:"المغلقة",        val:todayReport.closed_tasks },
@@ -561,7 +774,7 @@ export default function Home() {
               </div>
               {todayReport.notes && (
                 <p className="text-xs text-muted-foreground mt-3 p-2.5 bg-secondary/40 rounded-lg">
-                  💡 {todayReport.notes}
+                  {todayReport.notes}
                 </p>
               )}
             </CardContent>
