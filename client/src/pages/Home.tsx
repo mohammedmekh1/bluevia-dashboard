@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Activity, AlertCircle, BarChart3, CalendarDays, Globe2, RefreshCw, Send, Sparkles, Target, Truck, Users } from "lucide-react";
 import { useSheets } from "@/contexts/SheetsContext";
@@ -13,10 +13,12 @@ function Loading() { return <DashboardLayout><div className="luxury-loading"><Sp
 function ErrorView({ message, retry }: { message: string; retry: () => void }) { return <DashboardLayout><div className="luxury-loading"><AlertCircle size={30} color="#C41228" /><p>{message}</p><Button onClick={retry} className="mt-2">إعادة المحاولة</Button></div></DashboardLayout>; }
 export default function Home() {
   const { data, summary, loading, error, refetch } = useSheets(); const [range, setRange] = useState("كل الفترة");
-  const filteredLeads = useMemo(() => { const now = Date.now(); const limit = range === "آخر 7 أيام" ? 7 : range === "آخر 30 يوماً" ? 30 : null; return data.leads.filter((lead) => { if (lead.is_demo) return false; if (!limit) return true; const date = safeDate(lead.created_at); return date ? now - date.getTime() <= limit * 86400000 : false; }); }, [data.leads, range]);
-  const channels = useMemo(() => Object.entries(filteredLeads.reduce<Record<string, number>>((acc, lead) => { const key = lead.platform || lead.source || "غير محدد"; acc[key] = (acc[key] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, value]) => ({ name, value })), [filteredLeads]);
-  const destinations = useMemo(() => Object.entries(filteredLeads.reduce<Record<string, number>>((acc, lead) => { const key = lead.destination || "غير محدد"; acc[key] = (acc[key] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 6), [filteredLeads]);
-  const trend = useMemo(() => Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (6 - index)); const key = date.toDateString(); return { day: date.toLocaleDateString("ar-SA", { weekday: "short" }), leads: filteredLeads.filter((lead) => safeDate(lead.created_at)?.toDateString() === key).length, tasks: data.salesTasks.filter((task) => safeDate(task.created_at)?.toDateString() === key).length }; }), [filteredLeads, data.salesTasks]);
+  const now = Date.now();
+  const limit = range === "آخر 7 أيام" ? 7 : range === "آخر 30 يوماً" ? 30 : null;
+  const filteredLeads = data.leads.filter((lead) => { if (lead.is_demo) return false; if (!limit) return true; const date = safeDate(lead.created_at); return date ? now - date.getTime() <= limit * 86400000 : false; });
+  const channels = Object.entries(filteredLeads.reduce<Record<string, number>>((acc, lead) => { const key = lead.platform || lead.source || "غير محدد"; acc[key] = (acc[key] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 7).map(([name, value]) => ({ name, value }));
+  const destinations = Object.entries(filteredLeads.reduce<Record<string, number>>((acc, lead) => { const key = lead.destination || "غير محدد"; acc[key] = (acc[key] || 0) + 1; return acc; }, {})).sort((a, b) => b[1] - a[1]).slice(0, 6);
+  const trend = Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - (6 - index)); const key = date.toDateString(); return { day: date.toLocaleDateString("ar-SA", { weekday: "short" }), leads: filteredLeads.filter((lead) => safeDate(lead.created_at)?.toDateString() === key).length, tasks: data.salesTasks.filter((task) => safeDate(task.created_at)?.toDateString() === key).length }; });
   const recentTasks = data.salesTasks.slice(-5).reverse();
   const delivered = data.deliveries.filter((item) => item.status === "delivered").length;
   if (loading) return <Loading />; if (error) return <ErrorView message={error} retry={refetch} />;
