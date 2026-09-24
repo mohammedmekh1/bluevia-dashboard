@@ -22,7 +22,6 @@ export default function Leads() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"score"|"date">("date");
 
-  if (loading) return <DashboardLayout><div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin size-8" style={{ color:"#1A4B8C" }}/></div></DashboardLayout>;
 
   const allLeads = data.leads.filter((l) => !l.is_demo);
 
@@ -55,6 +54,8 @@ export default function Leads() {
 
   const hasPhone = allLeads.filter((l) => l.has_phone).length;
   const hasConsent = allLeads.filter((l) => l.consent).length;
+
+  if (loading) return <DashboardLayout><div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin size-8" style={{ color:"#1A4B8C" }}/></div></DashboardLayout>;
 
   return (
     <DashboardLayout>

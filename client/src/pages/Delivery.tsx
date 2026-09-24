@@ -10,7 +10,6 @@ export default function Delivery() {
   const [statusFilter, setStatusFilter] = useState<"all"|"delivered"|"failed">("all");
   const [channelFilter, setChannelFilter] = useState<"all"|string>("all");
 
-  if (loading) return <DashboardLayout><div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin size-8" style={{ color:"#1A4B8C" }}/></div></DashboardLayout>;
 
   const delivered = data.deliveries.filter((d) => d.status === "delivered").length;
   const failed = data.deliveries.length - delivered;
@@ -54,6 +53,8 @@ export default function Delivery() {
     .map(([name, value]) => ({ name: name.slice(0, 30), value }))
     .sort((a,b) => b.value - a.value)
     .slice(0, 5);
+
+  if (loading) return <DashboardLayout><div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin size-8" style={{ color:"#1A4B8C" }}/></div></DashboardLayout>;
 
   return (
     <DashboardLayout>
